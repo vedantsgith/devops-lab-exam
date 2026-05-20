@@ -1,9 +1,7 @@
 pipeline {
     agent any
-    environment {
-        AZURE_ACR = 'yourcollegeacr.azurecr.io'
-        IMAGE_NAME = 'devops-exam-backend'
-        TAG = "${env.BUILD_ID}"
+    tools {
+        nodejs 'Node 20'
     }
     stages {
         stage('Checkout') {
@@ -11,29 +9,31 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Dependency Check') {
+        stage('Install Dependencies') {
             steps {
-                dependencyCheck additionalArguments: '--scan ./ --format XML', odcInstallation: 'DP-Check'
+                bat 'npm install'
+            }
+        }
+        stage('OWASP Dependency-Check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --format XML', odcInstallation: 'OWASP'
                 dependencyCheckPublisher pattern: 'dependency-check-report.xml'
             }
         }
         stage('SonarQube Analysis') {
+            environment {
+                SCANNER_HOME = tool 'SonarScanner'
+            }
             steps {
-                withSonarQubeEnv('SonarQubeLocal') {
-                    bat 'sonar-scanner.bat -Dsonar.projectKey=DevOpsExam -Dsonar.sources=.'
+                withSonarQubeEnv('SonarQube') {
+                    bat '"%SCANNER_HOME%\\bin\\sonar-scanner.bat"'
                 }
             }
         }
-        stage('Docker Build') {
+        stage('Quality Gate') {
             steps {
-                bat "docker build -t ${AZURE_ACR}/${IMAGE_NAME}:${TAG} ."
-            }
-        }
-        stage('Push to Azure') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'azure-acr-creds', passwordVariable: 'ACR_PWD', usernameVariable: 'ACR_USR')]) {
-                    bat "docker login ${AZURE_ACR} -u %ACR_USR% -p %ACR_PWD%"
-                    bat "docker push ${AZURE_ACR}/${IMAGE_NAME}:${TAG}"
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }

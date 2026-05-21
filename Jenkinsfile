@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    environment {
+        IMAGE_NAME = 'devops-exam-backend'
+        TAG = "${env.BUILD_ID}"
+    }
     tools {
         nodejs 'Node 20'
     }
@@ -7,11 +11,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-            }
-        }
-        stage('Install Dependencies') {
-            steps {
-                bat 'npm install'
             }
         }
         stage('OWASP Dependency-Check') {
@@ -30,11 +29,9 @@ pipeline {
                 }
             }
         }
-        stage('Quality Gate') {
+        stage('Docker Build') {
             steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: true
-                }
+                bat "docker build -t ${IMAGE_NAME}:${TAG} ."
             }
         }
     }

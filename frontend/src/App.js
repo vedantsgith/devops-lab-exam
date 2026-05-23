@@ -9,7 +9,7 @@ function App() {
   // useEffect is a React hook that runs side effects, such as fetching data
   useEffect(() => {
     // Fetch data from the backend API endpoint
-    fetch('http://localhost:5000/api/project')
+    fetch('https://devops-lab-backend.onrender.com/api/project')
       .then((response) => response.json()) // Convert the API response to JSON
       .then((data) => setProjectData(data)); // Update the state with the fetched data
   }, []); // Empty dependency array ensures this runs only once after the component mounts
